@@ -1,5 +1,5 @@
 import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
-import { Upload, Download, Plus } from 'lucide-react';
+import { Upload, Download, Plus, X, Trash2 } from 'lucide-react';
 import {
   Card,
   CardHeader,
@@ -17,6 +17,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface TranslationData {
   [key: string]: {
@@ -90,6 +96,14 @@ export const TranslationEditor: React.FC = () => {
     );
   };
 
+  const handleClearTranslation = (id: string) => {
+    setTranslationEntries(entries =>
+      entries.map(entry =>
+        entry.id === id ? { ...entry, defaultMessage: '' } : entry
+      )
+    );
+  };
+
   const isModified = (entry: TranslationEntry): boolean => {
     return originalData[entry.id]?.defaultMessage !== entry.defaultMessage || 
            !Object.prototype.hasOwnProperty.call(originalData, entry.id);
@@ -104,7 +118,6 @@ export const TranslationEditor: React.FC = () => {
   };
 
   const handleDownloadClick = (): void => {
-    // Establecer el nombre del archivo inicial para el modal
     setDownloadFileName(fileName.replace('.json', '') || 'translations');
     setIsDownloadModalOpen(true);
   };
@@ -125,7 +138,6 @@ export const TranslationEditor: React.FC = () => {
     const link = document.createElement('a');
     link.href = url;
     
-    // Asegurarse de que el nombre del archivo termine en .json
     const finalFileName = downloadFileName.replace(/\.json$/, '') + '.json';
     link.download = finalFileName;
     
@@ -134,7 +146,6 @@ export const TranslationEditor: React.FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    // Cerrar el modal después de la descarga
     setIsDownloadModalOpen(false);
   };
 
@@ -194,7 +205,38 @@ export const TranslationEditor: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Propiedad</TableHead>
-                    <TableHead>Traducción</TableHead>
+                    <TableHead className="flex items-center justify-between">
+                      Traducción
+                      {translationEntries.some(
+                        (entry) => entry.defaultMessage
+                      ) && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setTranslationEntries((entries) =>
+                                    entries.map((entry) =>
+                                      entry.defaultMessage
+                                        ? { ...entry, defaultMessage: '' }
+                                        : entry
+                                    )
+                                  );
+                                }}
+                                className="h-8 w-8 p-0 ml-2"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-400" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p>Vaciar columna</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -203,7 +245,13 @@ export const TranslationEditor: React.FC = () => {
                       key={entry.id}
                       className={`
                         ${isEmptyNewEntry(entry) ? 'opacity-50' : ''}
-                        ${isNewTranslation(entry) ? 'bg-green-50' : isModified(entry) ? 'bg-blue-50' : ''}
+                        ${
+                          isNewTranslation(entry)
+                            ? 'bg-green-50'
+                            : isModified(entry)
+                            ? 'bg-blue-50'
+                            : ''
+                        }
                       `}
                     >
                       <TableCell>
@@ -216,15 +264,27 @@ export const TranslationEditor: React.FC = () => {
                           className="w-full"
                         />
                       </TableCell>
-                      <TableCell>
-                        <Input
-                          value={entry.defaultMessage}
-                          onChange={(e) =>
-                            handleTranslationChange(entry.id, e.target.value)
-                          }
-                          placeholder="Introduce el texto de la traducción"
-                          className="w-full"
-                        />
+                      <TableCell className="relative">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={entry.defaultMessage}
+                            onChange={(e) =>
+                              handleTranslationChange(entry.id, e.target.value)
+                            }
+                            placeholder="Introduce el texto de la traducción"
+                            className="w-full"
+                          />
+                          {entry.defaultMessage && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleClearTranslation(entry.id)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -266,7 +326,10 @@ export const TranslationEditor: React.FC = () => {
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="space-y-2">
-              <label htmlFor="filename" className="text-sm font-medium leading-none">
+              <label
+                htmlFor="filename"
+                className="text-sm font-medium leading-none"
+              >
                 Nombre del archivo
               </label>
               <Input
@@ -287,9 +350,7 @@ export const TranslationEditor: React.FC = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={downloadJSON}>
-              Descargar
-            </Button>
+            <Button onClick={downloadJSON}>Descargar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
